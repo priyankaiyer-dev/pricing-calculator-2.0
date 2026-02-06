@@ -1,0 +1,12 @@
+name: pricing-calculator-2.0
+description: Pricing Calculator 2.0
+runtime: python3
+# Use python -m to avoid PATH issues with gunicorn in some environments
+entry_point: python -m gunicorn -w 2 -k gthread --threads 8 --timeout 60 -b 0.0.0.0:$PORT app:app
+env:
+  - name: 'DATABRICKS_HOST'
+    value: 'samsara-dev-us-west-2.cloud.databricks.com'
+  - name: 'DATABRICKS_PATH'
+    value: '/sql/1.0/warehouses/194ee0a1b0dacb95'
+  - name: DATABRICKS_TOKEN
+    valueFrom: 'dapi02f3e319f00ebada3ebef03a296d7c77'

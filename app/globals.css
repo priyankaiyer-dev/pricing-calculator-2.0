@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Samsara Primary Colors */
+  --color-navy: #00263E;
+  --color-pulse-600: #2575ea;
+  --color-electric-blue: #0369EA;
+  --color-white: #FFFFFF;
+  
+  /* Secondary Colors */
+  --color-light-blue: #ACBEFF;
+  --color-asphalt-gray: #333333;
+  --color-snow: #F0F6FE;
+  
+  /* Typography */
+  --font-family-default: var(--font-inter), "InterVariable", "sans-serif";
+  --font-family-display: var(--font-inter), "InterVariable", "sans-serif";
+  --font-family-body: var(--font-inter), "InterVariable", "sans-serif";
+  
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+}
+
+@layer base {
+  body {
+    @apply font-sans text-slate-900 antialiased;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e8f4fc 100%);
+  }
+}
+
+@layer components {
+  /* Typography components */
+  .eyebrow {
+    @apply font-medium;
+  }
+  
+  .headline {
+    @apply font-display font-bold tracking-headline;
+  }
+  
+  .subheadline {
+    @apply font-medium;
+  }
+  
+  .body-text {
+    @apply font-sans;
+  }
+  
+  .tag {
+    @apply font-medium tracking-tag;
+  }
+  
+  .attribution {
+    @apply italic;
+  }
+  
+  .cta {
+    @apply font-semibold;
+  }
+  
+  .btn-primary {
+    @apply bg-pulse-600 text-white font-semibold px-6 py-3 rounded-xl hover:bg-pulse-700 transition-colors shadow-soft;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-2xl border border-slate-200/60 shadow-soft;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px -8px rgba(0, 38, 62, 0.12);
+  }
+
+  /* Input styles - ensure white background and readable text */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="search"],
+  textarea,
+  select {
+    @apply bg-white text-slate-900;
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="email"]:focus,
+  input[type="search"]:focus,
+  textarea:focus,
+  select:focus {
+    @apply bg-white text-slate-900;
+  }
+
+  /* Custom input style for white background and focus */
+  .form-input {
+    @apply bg-white px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500;
+  }
+}
+
+/* Print styles for customer quotes */
+@media print {
+  @page {
+    margin: 1in;
+  }
+  
+  body {
+    background: white !important;
+  }
+  
+  .print\:bg-white {
+    background-color: white !important;
+  }
+  
+  .print\:hidden {
+    display: none !important;
+  }
+}

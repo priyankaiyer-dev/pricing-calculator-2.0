@@ -1,0 +1,6 @@
+Flask
+python-dotenv
+pandas
+numpy==1.26.4
+databricks-sql-connector
+gunicorn
