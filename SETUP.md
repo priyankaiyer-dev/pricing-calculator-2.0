@@ -64,6 +64,27 @@
    ```
    Should be 18 or higher.
 
+## Databricks API
+
+The app connects to Databricks SQL Warehouse for data. Credentials are loaded from `.env.local`:
+
+1. **Copy the template:**
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. **Fill in your values** (from `app.yaml` or your Databricks workspace):
+   - `DATABRICKS_HOST` – e.g. `samsara-dev-us-west-2.cloud.databricks.com`
+   - `DATABRICKS_TOKEN` – Personal access token from Databricks
+   - `DATABRICKS_WAREHOUSE_ID` – From the warehouse path, e.g. `194ee0a1b0dacb95`
+
+3. **Execute queries** via the API:
+   ```bash
+   curl -X POST http://localhost:3000/api/databricks/query \
+     -H "Content-Type: application/json" \
+     -d '{"query": "SELECT 1 as test"}'
+   ```
+
 ## Common Issues
 
 - **"Module not found" errors**: Run `npm install` again
