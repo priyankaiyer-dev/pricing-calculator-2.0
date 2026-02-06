@@ -60,7 +60,7 @@ export async function executeStatement(
     body: JSON.stringify({
       warehouse_id: warehouseId,
       statement: statement,
-      wait_timeout: options?.waitTimeout ?? 30,
+      wait_timeout: `${Math.min(Math.max(options?.waitTimeout ?? 30, 0), 50)}s`,
     }),
   });
 

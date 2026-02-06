@@ -53,7 +53,7 @@ const response = await fetch(`${baseUrl}/api/2.0/sql/statements`, {
   body: JSON.stringify({
     warehouse_id: warehouseId,
     statement: sql,
-    wait_timeout: 60,
+    wait_timeout: '50s',
   }),
 });
 
@@ -65,7 +65,7 @@ if (!response.ok) {
 
 const result = await response.json();
 if (result.status?.state === 'SUCCEEDED') {
-  console.log('✓ Table main.default.quotes created successfully!');
+  console.log('✓ Table hive_metastore.default.quotes created successfully!');
 } else if (result.status?.state === 'FAILED' || result.status?.state === 'CANCELED') {
   console.error('Statement failed:', result.status);
   process.exit(1);

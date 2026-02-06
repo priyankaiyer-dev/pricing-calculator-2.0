@@ -1,7 +1,8 @@
 -- Create quotes table for pricing-calculator-2.0
 -- Run with: npm run create-quotes-table
+-- Uses hive_metastore.default (change to main.default if you have Unity Catalog permissions)
 
-CREATE TABLE IF NOT EXISTS main.default.quotes (
+CREATE TABLE IF NOT EXISTS hive_metastore.default.quotes (
   id STRING NOT NULL,
   account_name STRING NOT NULL,
   deal_name STRING NOT NULL,
