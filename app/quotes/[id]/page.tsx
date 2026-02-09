@@ -223,9 +223,14 @@ export default function QuoteEditorPage() {
   const handleProductDiscountChange = (itemId: string, paymentOption: PricingOption, discount: number) => {
     if (!quote) return;
 
+    const defaultDiscounts = Object.fromEntries(PRICING_OPTIONS.map((opt) => [opt, 0])) as Record<PricingOption, number>;
     const updatedItems = quote.productLineItems.map(item => {
       if (item.id === itemId) {
-        const updatedDiscounts = { ...(item.discounts || {}), [paymentOption]: discount };
+        const updatedDiscounts: Record<PricingOption, number> = {
+          ...defaultDiscounts,
+          ...(item.discounts || defaultDiscounts),
+          [paymentOption]: discount,
+        };
         return { ...item, discounts: updatedDiscounts };
       }
       return item;
