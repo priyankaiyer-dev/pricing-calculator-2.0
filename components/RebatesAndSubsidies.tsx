@@ -2,7 +2,16 @@
 
 import { useState } from 'react';
 import { PricingOption } from '@/lib/types/quote';
+import { PRICING_OPTIONS } from '@/lib/constants';
 import { DollarSign, Percent } from 'lucide-react';
+
+function fullRecordFromPartial(
+  partial: Record<PricingOption, number> | undefined,
+  override: Partial<Record<PricingOption, number>>
+): Record<PricingOption, number> {
+  const base = Object.fromEntries(PRICING_OPTIONS.map((opt) => [opt, partial?.[opt] ?? 0])) as Record<PricingOption, number>;
+  return { ...base, ...override };
+}
 
 interface RebatesAndSubsidiesProps {
   pricingOptions: PricingOption[];
@@ -53,17 +62,16 @@ export default function RebatesAndSubsidiesComponent({
   const hasFinancedMonthly = pricingOptions.includes('Financed Monthly');
 
   const handleRebateChange = (option: PricingOption, value: string) => {
-    const rebate = rebatesAndSubsidies.rebate || {};
     const numValue = value === '' ? 0 : parseFloat(value);
     if (!isNaN(numValue) && numValue >= 0) {
       onUpdate({
         ...rebatesAndSubsidies,
-        rebate: { ...rebate, [option]: numValue },
+        rebate: fullRecordFromPartial(rebatesAndSubsidies.rebate, { [option]: numValue }),
       });
     } else if (value === '') {
       onUpdate({
         ...rebatesAndSubsidies,
-        rebate: { ...rebate, [option]: 0 },
+        rebate: fullRecordFromPartial(rebatesAndSubsidies.rebate, { [option]: 0 }),
       });
     }
   };
@@ -103,17 +111,16 @@ export default function RebatesAndSubsidiesComponent({
   };
 
   const handleFreeMonthsChange = (option: PricingOption, value: string) => {
-    const freeMonths = rebatesAndSubsidies.freeMonths || {};
     const numValue = value === '' ? 0 : parseInt(value);
     if (!isNaN(numValue) && numValue >= 0) {
       onUpdate({
         ...rebatesAndSubsidies,
-        freeMonths: { ...freeMonths, [option]: numValue },
+        freeMonths: fullRecordFromPartial(rebatesAndSubsidies.freeMonths, { [option]: numValue }),
       });
     } else if (value === '') {
       onUpdate({
         ...rebatesAndSubsidies,
-        freeMonths: { ...freeMonths, [option]: 0 },
+        freeMonths: fullRecordFromPartial(rebatesAndSubsidies.freeMonths, { [option]: 0 }),
       });
     }
   };

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { PricingOption } from '@/lib/types/quote';
+import { PRICING_OPTIONS } from '@/lib/constants';
 import { DollarSign, Percent } from 'lucide-react';
 
 interface DiscountManagerProps {
@@ -22,7 +23,10 @@ export default function DiscountManager({
   currency,
 }: DiscountManagerProps) {
   const [inputMode, setInputMode] = useState<Record<PricingOption, 'discount' | 'target'>>(
-    paymentOptions.reduce((acc, option) => ({ ...acc, [option]: 'discount' }), {} as Record<PricingOption, 'discount' | 'target'>)
+    () =>
+      Object.fromEntries(
+        PRICING_OPTIONS.map((opt) => [opt, paymentOptions.includes(opt) ? 'discount' : 'discount'])
+      ) as Record<PricingOption, 'discount' | 'target'>
   );
 
   const formatCurrency = (amount: number) => {

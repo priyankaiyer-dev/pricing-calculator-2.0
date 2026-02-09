@@ -202,3 +202,22 @@ Record of user requests and error resolutions from this process. New entries are
 **Request:** Fix error and ensure no more pricing-options-related type errors. Error: Argument of type 'string[]' is not assignable to parameter of type 'SetStateAction<PricingOption[]>' at MultiSelectDropdown onChange (setSelectedPricingOptions(updated)).
 
 **Fix:** Made `MultiSelectDropdown` generic so `selected` and `onChange` use the same literal type as `options`. In `components/MultiSelectDropdown.tsx`: added generic `<T extends string = string>`, typed props as `options: readonly T[]`, `selected: T[]`, `onChange: (selected: T[]) => void`. When the page passes `options={PRICING_OPTIONS}`, TypeScript infers `T` as `PricingOption`, so `onChange(updated)` is `PricingOption[]` and matches state. Also removed the unnecessary `as PricingOption[]` cast on the new-quote page and the `as any` on handleFieldChange for pricingOptions on the edit page.
+
+---
+
+## 24. Type error: rebate/freeMonths {} missing Record<PricingOption, number>
+
+**Error:** Type '{}' is missing the following properties from type 'Record<PricingOption, number>': Upfront, Annual, Quarterly, "Financed Monthly", "Direct Monthly" — in RebatesAndSubsidies at `rebate: { ...rebate, [option]: numValue }` (and similarly for freeMonths).
+
+**Fix:** In `components/RebatesAndSubsidies.tsx`, added a helper `fullRecordFromPartial(partial, override)` that builds a full `Record<PricingOption, number>` from PRICING_OPTIONS (default 0), merges in the existing partial, then the override. Updated `handleRebateChange` and `handleFreeMonthsChange` to use it so every `onUpdate` call passes a complete Record for `rebate` and `freeMonths`.
+
+---
+
+## 25. Ensure Record&lt;PricingOption, number&gt; / full-record pattern everywhere
+
+**Request:** Make sure we don't run into the same error (missing keys on Record&lt;PricingOption, number&gt;) on any other pages.
+
+**What we did:**
+- **Quote edit page (`app/quotes/[id]/page.tsx`):** `discountedPrices` was built with only `selectedPricingOptions` keys, then passed to RebatesAndSubsidies as `discountedAnnualPrices`. Replaced with `Object.fromEntries(PRICING_OPTIONS.map(...))` so the object has all five keys (0 for unselected options), satisfying `Record<PricingOption, number>`.
+- **DiscountManager (`components/DiscountManager.tsx`):** `inputMode` state was initialized with `paymentOptions.reduce(..., {} as Record<...>)`, so only payment-option keys existed. Replaced with `Object.fromEntries(PRICING_OPTIONS.map(...))` so the initial state is a full record. Added `PRICING_OPTIONS` import from `@/lib/constants`.
+- **Other:** Confirmed `quote.rebatesAndSubsidies || {}` is valid (props accept optional rebate/freeMonths). No changes to view page or calculations; they use optional chaining / defaults and are safe.

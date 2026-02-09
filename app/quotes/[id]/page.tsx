@@ -487,10 +487,14 @@ export default function QuoteEditorPage() {
         {/* Rebates and Subsidies */}
         {quote.productLineItems.length > 0 && selectedPricingOptions.length > 0 && (() => {
           // Calculate discounted annual prices for each payment option (after product-level discounts, before rebates/subsidies)
-          const discountedPrices: Record<PricingOption, number> = {} as Record<PricingOption, number>;
-          selectedPricingOptions.forEach(option => {
-            discountedPrices[option] = calculateDiscountedPriceForOption(quote.productLineItems, option);
-          });
+          const discountedPrices = Object.fromEntries(
+            PRICING_OPTIONS.map((opt) => [
+              opt,
+              selectedPricingOptions.includes(opt)
+                ? calculateDiscountedPriceForOption(quote.productLineItems, opt)
+                : 0,
+            ])
+          ) as Record<PricingOption, number>;
           
           return (
             <div className="card p-6 mb-6">
