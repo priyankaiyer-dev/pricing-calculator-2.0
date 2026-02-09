@@ -189,7 +189,7 @@ export default function QuoteEditorPage() {
         perLicensePerMonth,
         annualTotal: 0,
       }),
-      discounts: {}, // Initialize empty discounts object
+      discounts: Object.fromEntries(PRICING_OPTIONS.map((opt) => [opt, 0])) as Record<PricingOption, number>,
     };
 
     const updatedItems = [...quote.productLineItems, newItem];
