@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Quote, ProductLineItem, PricingOption } from '@/lib/types/quote';
-import { Product } from '@/lib/types/product';
+import { Product, getProductPriceForCurrency } from '@/lib/types/product';
 import { Account } from '@/lib/types/account';
 import { ArrowLeft, Save, Copy, Trash2 } from 'lucide-react';
 import Link from 'next/link';
@@ -171,20 +171,22 @@ export default function QuoteEditorPage() {
   const handleProductSelect = (product: Product) => {
     if (!quote) return;
 
+    const { hardware, perLicensePerMonth } = getProductPriceForCurrency(product, quote.currency);
+
     const newItem: ProductLineItem = {
       id: `item-${Date.now()}`,
       productName: product.name,
       sku: product.sku,
       quantity: 1,
-      hardware: product.hardware,
-      perLicensePerMonth: product.perLicensePerMonth,
+      hardware,
+      perLicensePerMonth,
       annualTotal: calculateAnnualTotal({
         id: '',
         productName: product.name,
         sku: product.sku,
         quantity: 1,
-        hardware: product.hardware,
-        perLicensePerMonth: product.perLicensePerMonth,
+        hardware,
+        perLicensePerMonth,
         annualTotal: 0,
       }),
       discounts: {}, // Initialize empty discounts object

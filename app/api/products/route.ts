@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { searchProducts, getProductsByPricebook } from '@/lib/data/mockProducts';
+import { searchProducts, getProductsByPricebook } from '@/lib/data/pricebookProducts';
 import { Pricebook } from '@/lib/types/product';
 
 export const dynamic = 'force-dynamic';

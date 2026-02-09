@@ -28,6 +28,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# mock database (file-based quotes)
+/data/quotes.json
+
 # vercel
 .vercel
 
