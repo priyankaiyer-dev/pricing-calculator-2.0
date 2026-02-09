@@ -9,4 +9,7 @@ env:
   - name: 'DATABRICKS_PATH'
     value: '/sql/1.0/warehouses/194ee0a1b0dacb95'
   - name: DATABRICKS_TOKEN
-    valueFrom: 'dapi02f3e319f00ebada3ebef03a296d7c77'
+    valueFrom: 
+      secretKeyRef:
+        scope: pricing-calculator
+        key: databricks-token
