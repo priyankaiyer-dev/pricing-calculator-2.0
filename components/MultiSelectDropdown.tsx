@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 
 interface MultiSelectDropdownProps {
-  options: string[];
+  options: readonly string[];
   selected: string[];
   onChange: (selected: string[]) => void;
   placeholder?: string;
