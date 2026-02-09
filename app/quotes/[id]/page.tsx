@@ -391,7 +391,7 @@ export default function QuoteEditorPage() {
                 selected={selectedPricingOptions}
                 onChange={(updated) => {
                   setSelectedPricingOptions(updated);
-                  handleFieldChange('pricingOptions' as any, updated);
+                  handleFieldChange('pricingOptions', updated);
                 }}
                 placeholder="Select pricing options..."
               />

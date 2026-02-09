@@ -194,3 +194,11 @@ Record of user requests and error resolutions from this process. New entries are
 **Request:** (1) Save all new commands and error fixes to this same file as we go. (2) Fix Databricks deployment error: type 'readonly ["Upfront", "Annual", ...]' is readonly and cannot be assigned to mutable type 'string[]' (at MultiSelectDropdown `options={PRICING_OPTIONS}`).
 
 **Fix:** Updated `components/MultiSelectDropdown.tsx`: in `MultiSelectDropdownProps`, changed `options: string[]` to `options: readonly string[]` so it accepts the `as const` array from `PRICING_OPTIONS` without requiring a mutable copy.
+
+---
+
+## 23. Type error: string[] not assignable to SetStateAction<PricingOption[]>
+
+**Request:** Fix error and ensure no more pricing-options-related type errors. Error: Argument of type 'string[]' is not assignable to parameter of type 'SetStateAction<PricingOption[]>' at MultiSelectDropdown onChange (setSelectedPricingOptions(updated)).
+
+**Fix:** Made `MultiSelectDropdown` generic so `selected` and `onChange` use the same literal type as `options`. In `components/MultiSelectDropdown.tsx`: added generic `<T extends string = string>`, typed props as `options: readonly T[]`, `selected: T[]`, `onChange: (selected: T[]) => void`. When the page passes `options={PRICING_OPTIONS}`, TypeScript infers `T` as `PricingOption`, so `onChange(updated)` is `PricingOption[]` and matches state. Also removed the unnecessary `as PricingOption[]` cast on the new-quote page and the `as any` on handleFieldChange for pricingOptions on the edit page.

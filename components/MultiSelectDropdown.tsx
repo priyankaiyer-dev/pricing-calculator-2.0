@@ -3,21 +3,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 
-interface MultiSelectDropdownProps {
-  options: readonly string[];
-  selected: string[];
-  onChange: (selected: string[]) => void;
+interface MultiSelectDropdownProps<T extends string = string> {
+  options: readonly T[];
+  selected: T[];
+  onChange: (selected: T[]) => void;
   placeholder?: string;
   label?: string;
 }
 
-export default function MultiSelectDropdown({
+export default function MultiSelectDropdown<T extends string = string>({
   options,
   selected,
   onChange,
   placeholder = 'Select options...',
   label,
-}: MultiSelectDropdownProps) {
+}: MultiSelectDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -32,17 +32,17 @@ export default function MultiSelectDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleOption = (option: string) => {
+  const toggleOption = (option: T) => {
     if (selected.includes(option)) {
-      onChange(selected.filter(item => item !== option));
+      onChange(selected.filter((item) => item !== option));
     } else {
       onChange([...selected, option]);
     }
   };
 
-  const removeOption = (option: string, e: React.MouseEvent) => {
+  const removeOption = (option: T, e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(selected.filter(item => item !== option));
+    onChange(selected.filter((item) => item !== option));
   };
 
   return (

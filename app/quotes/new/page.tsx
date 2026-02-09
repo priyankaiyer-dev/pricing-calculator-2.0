@@ -241,7 +241,7 @@ export default function NewQuotePage() {
                   onChange={(updated) => {
                     setFormData(prev => ({
                       ...prev,
-                      pricingOptions: updated as PricingOption[],
+                      pricingOptions: updated,
                     }));
                   }}
                   placeholder="Select pricing options..."
