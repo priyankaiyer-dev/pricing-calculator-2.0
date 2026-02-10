@@ -2,6 +2,8 @@
 
 A Next.js-based pricing calculator web application for Samsara Sales reps, replacing the existing Google Sheets template.
 
+Hosted in Databricks Apps. Link: https://pricing-calculator-app-5924096274798303.aws.databricksapps.com
+
 ## Features
 
 - **Quote Management**: Create, edit, duplicate, and delete quotes
