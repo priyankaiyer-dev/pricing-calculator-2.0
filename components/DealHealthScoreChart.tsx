@@ -65,7 +65,6 @@ function ReferenceLineLabel({
         <div
           className="text-right text-[10px] font-medium text-slate-800 leading-tight break-words w-full"
           style={{ lineHeight: 1.35 }}
-          xmlns="http://www.w3.org/1999/xhtml"
         >
           {labelText}
         </div>
