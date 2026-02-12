@@ -226,7 +226,7 @@ export default function QuoteComparisonPage() {
               {[
                 {
                   label: 'Annual List Value',
-                  getValue: () => formatCurrency(annualListPrice),
+                  getValue: (_option: PricingOption) => formatCurrency(annualListPrice),
                   sameForAll: true,
                 },
                 {
@@ -325,7 +325,7 @@ export default function QuoteComparisonPage() {
                         key={option}
                         className="px-4 py-2 text-right font-medium text-slate-800 border-b border-r border-slate-200 last:border-r-0"
                       >
-                        {row.sameForAll ? row.getValue() : row.getValue(option)}
+                        {row.getValue(option)}
                       </td>
                     ))}
                   </tr>
