@@ -12,6 +12,7 @@ import ProductSelector from '@/components/ProductSelector';
 import ProductLineItems from '@/components/ProductLineItems';
 import RebatesAndSubsidies from '@/components/RebatesAndSubsidies';
 import MultiSelectDropdown from '@/components/MultiSelectDropdown';
+import DealHealthScoreChart from '@/components/DealHealthScoreChart';
 import { calculateAnnualTotal, calculatePaymentOptionPricing, calculateAnnualListPrice, calculateDiscountedPriceForOption } from '@/lib/utils/calculations';
 import { generateDealName, getRecurringPaymentLabel, getRecurringPaymentValue, getFirstPeriodPaymentLabel } from '@/lib/utils/formatting';
 import { PRICING_OPTIONS } from '@/lib/constants';
@@ -628,72 +629,79 @@ export default function QuoteEditorPage() {
               if (!pricing) return null;
               
               return (
-                <div key={option} className="mb-6 last:mb-0 p-4 bg-slate-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-slate-700">{option}</h3>
-                    <Link
-                      href={`/quotes/${quote.id}/view/${encodeURIComponent(option)}`}
-                      className="btn-primary text-sm px-4 py-2"
-                    >
-                      View Customer Quote
-                    </Link>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-4 bg-white rounded-lg">
-                      <div className="text-sm text-slate-600 mb-1">Blended Discount</div>
-                      <div className="text-2xl font-bold text-navy">
-                        {pricing.blendedDiscount.toFixed(2)}%
+                <div key={option} className="mb-6 last:mb-0 flex gap-4 p-4 bg-slate-50 rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-slate-700">{option}</h3>
+                      <Link
+                        href={`/quotes/${quote.id}/view/${encodeURIComponent(option)}`}
+                        className="btn-primary text-sm px-4 py-2"
+                      >
+                        View Customer Quote
+                      </Link>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-4 bg-white rounded-lg">
+                        <div className="text-sm text-slate-600 mb-1">Blended Discount</div>
+                        <div className="text-2xl font-bold text-navy">
+                          {pricing.blendedDiscount.toFixed(2)}%
+                        </div>
+                      </div>
+                      <div className="p-4 bg-white rounded-lg">
+                        <div className="text-sm text-slate-600 mb-1">Discount Value</div>
+                        <div className="text-2xl font-bold text-navy">
+                          {formatCurrency(pricing.breakdown.discountValue)}
+                        </div>
+                      </div>
+                      <div className="p-4 bg-white rounded-lg">
+                        <div className="text-sm text-slate-600 mb-1">ACV</div>
+                        <div className="text-2xl font-bold text-navy">
+                          {formatCurrency(pricing.breakdown.acv)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {formatCurrency(
+                            pricing.breakdown.acvWithoutUpfrontDiscounts ?? pricing.breakdown.acv
+                          )}{' '}
+                          without subsidies
+                        </div>
+                      </div>
+                      <div className="p-4 bg-white rounded-lg">
+                        <div className="text-sm text-slate-600 mb-1">License TCV</div>
+                        <div className="text-2xl font-bold text-navy">
+                          {formatCurrency(pricing.breakdown.licenseTcv)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {formatCurrency(
+                            pricing.breakdown.licenseTcvWithoutUpfrontDiscounts ?? pricing.breakdown.licenseTcv
+                          )}{' '}
+                          without subsidies
+                        </div>
                       </div>
                     </div>
-                    <div className="p-4 bg-white rounded-lg">
-                      <div className="text-sm text-slate-600 mb-1">Discount Value</div>
-                      <div className="text-2xl font-bold text-navy">
-                        {formatCurrency(pricing.breakdown.discountValue)}
-                      </div>
-                    </div>
-                    <div className="p-4 bg-white rounded-lg">
-                      <div className="text-sm text-slate-600 mb-1">ACV</div>
-                      <div className="text-2xl font-bold text-navy">
-                        {formatCurrency(pricing.breakdown.acv)}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {formatCurrency(
-                          pricing.breakdown.acvWithoutUpfrontDiscounts ?? pricing.breakdown.acv
-                        )}{' '}
-                        without subsidies
-                      </div>
-                    </div>
-                    <div className="p-4 bg-white rounded-lg">
-                      <div className="text-sm text-slate-600 mb-1">License TCV</div>
-                      <div className="text-2xl font-bold text-navy">
-                        {formatCurrency(pricing.breakdown.licenseTcv)}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {formatCurrency(
-                          pricing.breakdown.licenseTcvWithoutUpfrontDiscounts ?? pricing.breakdown.licenseTcv
-                        )}{' '}
-                        without subsidies
+
+                    <div className="mt-4 flex gap-4">
+                      {option !== 'Upfront' && pricing.breakdown.firstPeriodPayment !== undefined && (
+                        <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
+                          <div className="text-sm mb-1">
+                            {getFirstPeriodPaymentLabel(option)}
+                          </div>
+                          <div className="text-2xl font-bold">
+                            {formatCurrency(pricing.breakdown.firstPeriodPayment)}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
+                        <div className="text-sm mb-1">{getRecurringPaymentLabel(option)}</div>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(getRecurringPaymentValue(pricing.breakdown, option))}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 flex gap-4">
-                    {option !== 'Upfront' && pricing.breakdown.firstPeriodPayment !== undefined && (
-                      <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
-                        <div className="text-sm mb-1">
-                          {getFirstPeriodPaymentLabel(option)}
-                        </div>
-                        <div className="text-2xl font-bold">
-                          {formatCurrency(pricing.breakdown.firstPeriodPayment)}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
-                      <div className="text-sm mb-1">{getRecurringPaymentLabel(option)}</div>
-                      <div className="text-2xl font-bold">
-                        {formatCurrency(getRecurringPaymentValue(pricing.breakdown, option))}
-                      </div>
-                    </div>
+                  <div className="w-56 shrink-0 min-h-[260px] p-4 bg-sky-100 rounded-lg border border-sky-200 flex flex-col">
+                    <h4 className="text-sm font-semibold text-slate-800 mb-3">Deal Health Score</h4>
+                    <DealHealthScoreChart blendedDiscount={pricing.blendedDiscount} />
                   </div>
                 </div>
               );
