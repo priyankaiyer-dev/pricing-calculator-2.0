@@ -18,6 +18,8 @@ export interface Product {
   category?: string;
   /** When quote currency differs from USD, use these if present */
   pricingByCurrency?: Partial<Record<Currency, ProductPricingByCurrency>>;
+  /** When true, display as hardware-only: list price and option columns show only $/unit, no monthly/yearly */
+  isHardwareOnly?: boolean;
 }
 
 /** Get hardware and perLicensePerMonth for a product in the given currency */

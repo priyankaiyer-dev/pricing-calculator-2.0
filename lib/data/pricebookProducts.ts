@@ -47,6 +47,8 @@ function parseRow(row: string[]): Product[] {
   const hardwareUsd = parsePrice(row[COL.hardware] ?? '');
   const usdMonthly =
     parsePrice(row[COL.usdMonthly] ?? '') || parsePrice(row[COL.usdAnnual] ?? '') / 12;
+  const productType = (row[COL.type] ?? '').trim().toLowerCase();
+  const isHardwareOnly = productType === 'accessory' || productType === 'hardware';
 
   const pricebooks: Pricebook[] = ['FY26', 'FY25', 'Legacy'];
   for (const pb of pricebooks) {
@@ -77,6 +79,7 @@ function parseRow(row: string[]): Product[] {
       perLicensePerMonth: usdMonthly,
       category: (row[COL.category] ?? '').trim() || undefined,
       pricingByCurrency: Object.keys(pricingByCurrency).length > 0 ? pricingByCurrency : undefined,
+      isHardwareOnly: isHardwareOnly || undefined,
     });
   }
   return products;

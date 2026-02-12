@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Quote, ProductLineItem, PricingOption } from '@/lib/types/quote';
 import { Product, getProductPriceForCurrency } from '@/lib/types/product';
 import { Account } from '@/lib/types/account';
-import { ArrowLeft, Save, Copy, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import AccountAutocomplete from '@/components/AccountAutocomplete';
 import ProductSelector from '@/components/ProductSelector';
@@ -13,7 +13,7 @@ import ProductLineItems from '@/components/ProductLineItems';
 import RebatesAndSubsidies from '@/components/RebatesAndSubsidies';
 import MultiSelectDropdown from '@/components/MultiSelectDropdown';
 import { calculateAnnualTotal, calculatePaymentOptionPricing, calculateAnnualListPrice, calculateDiscountedPriceForOption } from '@/lib/utils/calculations';
-import { generateDealName } from '@/lib/utils/formatting';
+import { generateDealName, getRecurringPaymentLabel, getRecurringPaymentValue, getFirstPeriodPaymentLabel } from '@/lib/utils/formatting';
 import { PRICING_OPTIONS } from '@/lib/constants';
 
 export default function QuoteEditorPage() {
@@ -25,6 +25,18 @@ export default function QuoteEditorPage() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | null>(null);
   const [selectedPricingOptions, setSelectedPricingOptions] = useState<PricingOption[]>([]);
+  const [rebatesSectionOpen, setRebatesSectionOpen] = useState(true);
+
+  // Recalculate pricing for display so breakdown always has acvWithoutUpfrontDiscounts (e.g. for old saved quotes)
+  const displayPricing = useMemo(() => {
+    if (!quote || quote.productLineItems.length === 0 || selectedPricingOptions.length === 0) return [];
+    return calculatePaymentOptionPricing(
+      quote.productLineItems,
+      selectedPricingOptions,
+      quote.termLength,
+      quote.rebatesAndSubsidies
+    );
+  }, [quote, selectedPricingOptions]);
 
   useEffect(() => {
     if (quoteId) {
@@ -190,6 +202,7 @@ export default function QuoteEditorPage() {
         annualTotal: 0,
       }),
       discounts: Object.fromEntries(PRICING_OPTIONS.map((opt) => [opt, 0])) as Record<PricingOption, number>,
+      isHardwareOnly: product.isHardwareOnly,
     };
 
     const updatedItems = [...quote.productLineItems, newItem];
@@ -385,6 +398,19 @@ export default function QuoteEditorPage() {
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Segment
+              </label>
+              <input
+                type="text"
+                value="Enterprise - COR"
+                disabled
+                readOnly
+                className="w-full min-h-[42px] px-4 py-2 bg-slate-100 text-slate-600 border border-slate-300 rounded-lg cursor-not-allowed"
+              />
+            </div>
+
+            <div>
               <MultiSelectDropdown
                 label="Pricing Options*"
                 options={PRICING_OPTIONS}
@@ -404,32 +430,38 @@ export default function QuoteEditorPage() {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Pricebook *
               </label>
-              <select
-                value={quote.pricebook}
-                onChange={(e) => handleFieldChange('pricebook', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500"
-              >
-                <option value="FY26">FY26</option>
-                <option value="FY25">FY25</option>
-                <option value="Legacy">Legacy</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={quote.pricebook}
+                  onChange={(e) => handleFieldChange('pricebook', e.target.value)}
+                  className="w-full min-h-[42px] pl-4 pr-10 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500 appearance-none"
+                >
+                  <option value="FY26">FY26</option>
+                  <option value="FY25">FY25</option>
+                  <option value="Legacy">Legacy</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+              </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Currency *
               </label>
-              <select
-                value={quote.currency}
-                onChange={(e) => handleFieldChange('currency', e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500"
-              >
-                <option value="USD">USD</option>
-                <option value="CAD">CAD</option>
-                <option value="MXN">MXN</option>
-                <option value="GBP">GBP</option>
-                <option value="EUR">EUR</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={quote.currency}
+                  onChange={(e) => handleFieldChange('currency', e.target.value)}
+                  className="w-full min-h-[42px] pl-4 pr-10 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500 appearance-none"
+                >
+                  <option value="USD">USD</option>
+                  <option value="CAD">CAD</option>
+                  <option value="MXN">MXN</option>
+                  <option value="GBP">GBP</option>
+                  <option value="EUR">EUR</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+              </div>
             </div>
 
             <div>
@@ -454,6 +486,52 @@ export default function QuoteEditorPage() {
                 className="w-full px-4 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Fleet Size *
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={quote.fleetSize ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    handleFieldChange('fleetSize', undefined);
+                  } else {
+                    const num = parseInt(value, 10);
+                    if (!isNaN(num) && num >= 0) {
+                      handleFieldChange('fleetSize', num);
+                    }
+                  }
+                }}
+                placeholder="e.g. 50"
+                className="w-full px-4 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500"
+              />
+              {quote.fleetSize == null && (
+                <p className="text-sm text-red-600 mt-1">Fleet size is required</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Negotiation position (Opening Price Guidance)
+              </label>
+              <div className="relative">
+                <select
+                  value={quote.negotiationPosition ?? 'unfavorable'}
+                  onChange={(e) =>
+                    handleFieldChange('negotiationPosition', e.target.value as 'favorable' | 'unfavorable')
+                  }
+                  className="w-full min-h-[42px] pl-4 pr-10 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500 appearance-none"
+                >
+                  <option value="unfavorable">Motive Compete / Unfavorable</option>
+                  <option value="favorable">Favorable</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -477,6 +555,8 @@ export default function QuoteEditorPage() {
               items={quote.productLineItems}
               currency={quote.currency}
               pricingOptions={selectedPricingOptions}
+              fleetSize={quote.fleetSize}
+              negotiationPosition={quote.negotiationPosition ?? 'unfavorable'}
               onUpdateQuantity={handleUpdateQuantity}
               onUpdateDiscount={handleProductDiscountChange}
               onRemove={handleRemoveProduct}
@@ -498,29 +578,53 @@ export default function QuoteEditorPage() {
           
           return (
             <div className="card p-6 mb-6">
-              <h2 className="text-xl font-semibold text-navy mb-4">Rebates and Subsidies</h2>
-              <RebatesAndSubsidies
-                pricingOptions={selectedPricingOptions}
-                rebatesAndSubsidies={quote.rebatesAndSubsidies || {}}
-                annualListPrice={calculateAnnualListPrice(quote.productLineItems)}
-                discountedAnnualPrices={discountedPrices}
-                currency={quote.currency}
-                onUpdate={handleRebatesAndSubsidiesChange}
-              />
+              <button
+                type="button"
+                onClick={() => setRebatesSectionOpen((o) => !o)}
+                className="flex items-center gap-2 w-full text-left rounded focus:outline-none focus:ring-2 focus:ring-pulse-500 focus:ring-offset-1"
+                title={rebatesSectionOpen ? 'Hide section' : 'Show section'}
+              >
+                <span className="text-slate-500 shrink-0" aria-hidden>
+                  {rebatesSectionOpen ? (
+                    <ChevronDown className="w-5 h-5" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5" />
+                  )}
+                </span>
+                <h2 className="text-xl font-semibold text-navy">Rebates and Subsidies</h2>
+              </button>
+              {rebatesSectionOpen && (
+                <div className="mt-4">
+                  <RebatesAndSubsidies
+                    pricingOptions={selectedPricingOptions}
+                    rebatesAndSubsidies={quote.rebatesAndSubsidies || {}}
+                    annualListPrice={calculateAnnualListPrice(quote.productLineItems)}
+                    discountedAnnualPrices={discountedPrices}
+                    currency={quote.currency}
+                    onUpdate={handleRebatesAndSubsidiesChange}
+                  />
+                </div>
+              )}
             </div>
           );
         })()}
 
-        {/* Pricing Breakdown */}
+        {/* Pricing Breakdown - use recalculated pricing so breakdown always has acvWithoutUpfrontDiscounts */}
         {quote.productLineItems.length > 0 && selectedPricingOptions.length > 0 && (
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-navy">
                 Pricing Breakdown
               </h2>
+              <Link
+                href={`/quotes/${quote.id}/comparison`}
+                className="btn-primary text-sm px-4 py-2"
+              >
+                View Customer Quote Comparison
+              </Link>
             </div>
             {selectedPricingOptions.map(option => {
-              const pricing = quote.paymentOptionPricing.find(p => p.paymentOption === option);
+              const pricing = displayPricing.find(p => p.paymentOption === option);
               if (!pricing) return null;
               
               return (
@@ -552,19 +656,43 @@ export default function QuoteEditorPage() {
                       <div className="text-2xl font-bold text-navy">
                         {formatCurrency(pricing.breakdown.acv)}
                       </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {formatCurrency(
+                          pricing.breakdown.acvWithoutUpfrontDiscounts ?? pricing.breakdown.acv
+                        )}{' '}
+                        without subsidies
+                      </div>
                     </div>
-                    <div className="p-4 bg-slate-50 rounded-lg">
+                    <div className="p-4 bg-white rounded-lg">
                       <div className="text-sm text-slate-600 mb-1">License TCV</div>
                       <div className="text-2xl font-bold text-navy">
                         {formatCurrency(pricing.breakdown.licenseTcv)}
                       </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {formatCurrency(
+                          pricing.breakdown.licenseTcvWithoutUpfrontDiscounts ?? pricing.breakdown.licenseTcv
+                        )}{' '}
+                        without subsidies
+                      </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 p-4 bg-pulse-600 text-white rounded-lg">
-                    <div className="text-sm mb-1">Recurring Annual Payment</div>
-                    <div className="text-3xl font-bold">
-                      {formatCurrency(pricing.recurringAnnualPayment)}
+                  <div className="mt-4 flex gap-4">
+                    {option !== 'Upfront' && pricing.breakdown.firstPeriodPayment !== undefined && (
+                      <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
+                        <div className="text-sm mb-1">
+                          {getFirstPeriodPaymentLabel(option)}
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(pricing.breakdown.firstPeriodPayment)}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
+                      <div className="text-sm mb-1">{getRecurringPaymentLabel(option)}</div>
+                      <div className="text-2xl font-bold">
+                        {formatCurrency(getRecurringPaymentValue(pricing.breakdown, option))}
+                      </div>
                     </div>
                   </div>
                 </div>

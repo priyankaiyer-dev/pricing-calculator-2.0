@@ -1,4 +1,4 @@
-import { Quote, PaymentOptionPricing } from '@/lib/types/quote';
+import { Quote, PaymentOptionPricing, PricingOption, PricingBreakdown } from '@/lib/types/quote';
 
 /**
  * Format currency value
@@ -65,7 +65,62 @@ export function generateFormattedQuoteText(quote: Quote, paymentOption: PaymentO
   text += `Annual List Price:\t${formatCurrency(paymentOption.annualListPrice, quote.currency)}\n`;
   text += `Annual License Discount:\t${formatCurrency(paymentOption.annualLicenseDiscount, quote.currency)}\n`;
   text += `Blended Discount:\t${formatPercentage(paymentOption.blendedDiscount)}\n`;
-  text += `Recurring Annual Payment:\t${formatCurrency(paymentOption.recurringAnnualPayment, quote.currency)}\n`;
+  text += `${getRecurringPaymentLabel(paymentOption.paymentOption)}:\t${formatCurrency(getRecurringPaymentValue(paymentOption.breakdown, paymentOption.paymentOption), quote.currency)}\n`;
   
   return text;
+}
+
+/**
+ * Label for the recurring/upfront payment by option (e.g. "Recurring Quarterly Payment", "Upfront Payment")
+ */
+export function getRecurringPaymentLabel(option: PricingOption): string {
+  switch (option) {
+    case 'Upfront':
+      return 'Upfront Payment';
+    case 'Annual':
+      return 'Recurring Annual Payment';
+    case 'Quarterly':
+      return 'Recurring Quarterly Payment';
+    case 'Financed Monthly':
+    case 'Direct Monthly':
+      return 'Recurring Monthly Payment';
+    default:
+      return 'Recurring Payment';
+  }
+}
+
+/**
+ * Value for the recurring/upfront payment: ACV for Annual, ACV/4 for Quarterly, ACV/12 for Monthly, license TCV for Upfront
+ */
+export function getRecurringPaymentValue(breakdown: PricingBreakdown, option: PricingOption): number {
+  switch (option) {
+    case 'Upfront':
+      return breakdown.licenseTcv;
+    case 'Annual':
+      return breakdown.acv;
+    case 'Quarterly':
+      return breakdown.acv / 4;
+    case 'Financed Monthly':
+    case 'Direct Monthly':
+      return breakdown.acv / 12;
+    default:
+      return breakdown.acv;
+  }
+}
+
+/**
+ * Label for first period payment (e.g. "First Annual Payment", "First Quarterly Payment"). Not used for Upfront.
+ */
+export function getFirstPeriodPaymentLabel(option: PricingOption): string {
+  switch (option) {
+    case 'Annual':
+      return 'First Annual Payment';
+    case 'Quarterly':
+      return 'First Quarterly Payment';
+    case 'Financed Monthly':
+    case 'Direct Monthly':
+      return 'First Monthly Payment';
+    default:
+      return 'First Payment';
+  }
 }

@@ -11,6 +11,8 @@ export interface ProductLineItem {
   perLicensePerMonth: number;
   annualTotal: number;
   discounts?: Record<PricingOption, number>; // Discount percentage per payment option for this product
+  /** When true, display as hardware-only: list price and option columns show only $/unit, no monthly/yearly */
+  isHardwareOnly?: boolean;
 }
 
 export interface PricingBreakdown {
@@ -18,6 +20,14 @@ export interface PricingBreakdown {
   discountValue: number; // dollar amount
   acv: number; // Annual Contract Value
   licenseTcv: number; // Total Contract Value over term
+  /** ACV before rebates/subsidies/free months (same as acv when no upfront discounts) */
+  acvWithoutUpfrontDiscounts: number;
+  /** License TCV before rebates/subsidies/free months (same as licenseTcv when no upfront discounts) */
+  licenseTcvWithoutUpfrontDiscounts: number;
+  /** Discounted hardware total for this option (for first period payment calc); only for non-Upfront */
+  discountedHardware?: number;
+  /** First period payment = recurring + hardware - subsidies; only for non-Upfront options */
+  firstPeriodPayment?: number;
 }
 
 export interface PaymentOptionPricing {
@@ -53,6 +63,10 @@ export interface Quote {
   pricebook: Pricebook;
   currency: Currency;
   termLength: number; // in months
+  /** Customer fleet size (required for Opening Price Guidance). */
+  fleetSize?: number;
+  /** Negotiation position for Opening Price Guidance (USD Enterprise). */
+  negotiationPosition?: 'favorable' | 'unfavorable';
   productLineItems: ProductLineItem[];
   paymentOptionPricing: PaymentOptionPricing[];
   discounts?: Record<PricingOption, number>; // Discount percentages by payment option

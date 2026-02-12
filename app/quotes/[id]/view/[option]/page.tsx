@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Quote, PricingOption } from '@/lib/types/quote';
 import { ArrowLeft, Download, Copy, Printer } from 'lucide-react';
 import Link from 'next/link';
+import { getRecurringPaymentLabel, getRecurringPaymentValue, getFirstPeriodPaymentLabel } from '@/lib/utils/formatting';
 
 export default function CustomerQuotePage() {
   const params = useParams();
@@ -279,21 +280,33 @@ export default function CustomerQuotePage() {
             </div>
           </div>
 
-          <div className="bg-pulse-600 rounded-lg p-6 text-white">
-            <h3 className="text-lg font-semibold mb-4">Contract Value</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-pulse-100">Recurring Annual Payment:</span>
-                <span className="font-semibold">{formatCurrency(pricing.recurringAnnualPayment)}</span>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-700 mb-4">Contract Value</h3>
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between bg-slate-50 rounded-lg px-4 py-3">
+                <span className="text-slate-600">License TCV ({quote.termLength} months):</span>
+                <span className="font-semibold text-navy">{formatCurrency(pricing.breakdown.licenseTcv)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-pulse-100">License TCV ({quote.termLength} months):</span>
-                <span className="font-semibold">{formatCurrency(pricing.breakdown.licenseTcv)}</span>
+              <div className="flex justify-between bg-slate-50 rounded-lg px-4 py-3">
+                <span className="text-lg font-semibold text-slate-700">Total Contract Value:</span>
+                <span className="text-lg font-bold text-navy">{formatCurrency(pricing.breakdown.licenseTcv)}</span>
               </div>
-              <div className="border-t border-pulse-500 pt-3 mt-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-semibold">Total Contract Value:</span>
-                  <span className="text-2xl font-bold">{formatCurrency(pricing.breakdown.licenseTcv)}</span>
+            </div>
+            <div className="flex gap-4">
+              {paymentOption !== 'Upfront' && pricing.breakdown.firstPeriodPayment !== undefined && (
+                <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
+                  <div className="text-sm mb-1">
+                    {getFirstPeriodPaymentLabel(paymentOption)}
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(pricing.breakdown.firstPeriodPayment)}
+                  </div>
+                </div>
+              )}
+              <div className="flex-1 bg-pulse-600 rounded-lg p-4 text-white">
+                <div className="text-sm mb-1">{getRecurringPaymentLabel(paymentOption)}</div>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(getRecurringPaymentValue(pricing.breakdown, paymentOption))}
                 </div>
               </div>
             </div>

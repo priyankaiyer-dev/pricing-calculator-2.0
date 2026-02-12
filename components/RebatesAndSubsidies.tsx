@@ -53,9 +53,9 @@ export default function RebatesAndSubsidiesComponent({
     }).format(amount);
   };
 
-  // Rebate is NOT available for: Quarterly, Financed Monthly, Semi-Annual
+  // Rebate section shows for all payment options EXCEPT Direct Monthly
   const rebateEligibleOptions = pricingOptions.filter(
-    option => !['Quarterly', 'Financed Monthly', 'Semi-Annual'].includes(option)
+    (option) => option !== 'Direct Monthly'
   );
 
   // Subsidy is ONLY available for Financed Monthly
@@ -137,14 +137,55 @@ export default function RebatesAndSubsidiesComponent({
 
   return (
     <div className="space-y-6">
-      {/* Rebate Section */}
+      {/* Free Months Section - first */}
+      <div>
+        <h3 className="text-lg font-semibold text-navy mb-3">
+          Free Months
+        </h3>
+        <p className="text-xs text-slate-600 mb-4">
+          Number of free months applied upfront as an additional discount for any payment option.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {pricingOptions.map(option => {
+            const freeMonths = rebatesAndSubsidies.freeMonths?.[option] || 0;
+            const discountValue = calculateFreeMonthsDiscount(option);
+            return (
+              <div key={option}>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  {option}
+                </label>
+                <input
+                  type="text"
+                  value={freeMonths === 0 ? '' : freeMonths.toString()}
+                  onChange={(e) => handleFreeMonthsChange(option, e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500 mb-2"
+                />
+                {freeMonths > 0 && (
+                  <div className="text-xs text-slate-600">
+                    <div>{freeMonths} free month{freeMonths !== 1 ? 's' : ''}</div>
+                    <div className="font-medium text-slate-700">
+                      Discount Value: {formatCurrency(discountValue)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Rebate Section - second */}
       {rebateEligibleOptions.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-navy mb-3">
             Rebate (Buyout / Installation)
           </h3>
-          <p className="text-sm text-slate-600 mb-4">
-            Fixed dollar amount applied as an upfront discount. Available for: {rebateEligibleOptions.join(', ')}.
+          <p className="text-xs text-slate-600 mb-4">
+            Fixed dollar amount applied as an upfront discount. Rebates are{' '}
+            <strong>not applied to Direct Monthly.</strong> They are{' '}
+            <strong>restricted for Quarterly, Financed Monthly, and Semi-Annual</strong> and require
+            additional Deal Desk approval.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {rebateEligibleOptions.map(option => {
@@ -171,13 +212,13 @@ export default function RebatesAndSubsidiesComponent({
         </div>
       )}
 
-      {/* Subsidy Section */}
+      {/* Subsidy Section - third */}
       {hasFinancedMonthly && (
         <div>
           <h3 className="text-lg font-semibold text-navy mb-3">
             Subsidy for Financed Monthly
           </h3>
-          <p className="text-sm text-slate-600 mb-4">
+          <p className="text-xs text-slate-600 mb-4">
             Upfront discount for Financed Monthly deals only.
           </p>
           <div className="space-y-4">
@@ -255,44 +296,6 @@ export default function RebatesAndSubsidiesComponent({
           </div>
         </div>
       )}
-
-      {/* Free Months Section */}
-      <div>
-        <h3 className="text-lg font-semibold text-navy mb-3">
-          Free Months
-        </h3>
-        <p className="text-sm text-slate-600 mb-4">
-          Number of free months applied upfront as an additional discount for any payment option.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {pricingOptions.map(option => {
-            const freeMonths = rebatesAndSubsidies.freeMonths?.[option] || 0;
-            const discountValue = calculateFreeMonthsDiscount(option);
-            return (
-              <div key={option}>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  {option}
-                </label>
-                <input
-                  type="text"
-                  value={freeMonths === 0 ? '' : freeMonths.toString()}
-                  onChange={(e) => handleFreeMonthsChange(option, e.target.value)}
-                  placeholder="0"
-                  className="w-full px-4 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pulse-500 mb-2"
-                />
-                {freeMonths > 0 && (
-                  <div className="text-xs text-slate-600">
-                    <div>{freeMonths} free month{freeMonths !== 1 ? 's' : ''}</div>
-                    <div className="font-medium text-slate-700">
-                      Discount Value: {formatCurrency(discountValue)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }

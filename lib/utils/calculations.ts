@@ -129,12 +129,37 @@ export function calculatePricingBreakdown(
   const blendedDiscount = calculateBlendedDiscount(annualListPrice, finalPrice);
   const acv = finalPrice;
   const licenseTcv = acv * (termLength / 12);
+  const licenseTcvWithoutUpfrontDiscounts = discountedPrice * (termLength / 12);
+
+  // Discounted hardware total for this option (product-level discounts applied)
+  const discountedHardware = lineItems.reduce(
+    (sum, item) =>
+      sum +
+      item.hardware * item.quantity * (1 - (item.discounts?.[paymentOption] ?? 0) / 100),
+    0
+  );
+
+  // First period payment = recurring amount + hardware costs - applicable subsidies (capped at 0)
+  const periodsPerYear =
+    paymentOption === 'Annual' ? 1
+    : paymentOption === 'Quarterly' ? 4
+    : paymentOption === 'Financed Monthly' || paymentOption === 'Direct Monthly' ? 12
+    : 0;
+  const recurringPeriodAmount = periodsPerYear > 0 ? acv / periodsPerYear : 0;
+  const firstPeriodPayment =
+    periodsPerYear > 0
+      ? Math.max(0, recurringPeriodAmount + discountedHardware - upfrontDiscounts)
+      : undefined;
 
   return {
     blendedDiscount,
     discountValue: totalDiscountValue,
     acv,
     licenseTcv,
+    acvWithoutUpfrontDiscounts: discountedPrice,
+    licenseTcvWithoutUpfrontDiscounts,
+    discountedHardware: periodsPerYear > 0 ? discountedHardware : undefined,
+    firstPeriodPayment,
   };
 }
 
