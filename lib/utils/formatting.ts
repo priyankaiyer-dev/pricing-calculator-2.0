@@ -63,7 +63,7 @@ export function generateFormattedQuoteText(quote: Quote, paymentOption: PaymentO
   }
   text += `\n`;
   text += `Annual List Price:\t${formatCurrency(paymentOption.annualListPrice, quote.currency)}\n`;
-  text += `Annual License Discount:\t${formatCurrency(paymentOption.annualLicenseDiscount, quote.currency)}\n`;
+  text += `License Discount:\t${formatCurrency(paymentOption.annualLicenseDiscount, quote.currency)}\n`;
   text += `Blended Discount:\t${formatPercentage(paymentOption.blendedDiscount)}\n`;
   text += `${getRecurringPaymentLabel(paymentOption.paymentOption)}:\t${formatCurrency(getRecurringPaymentValue(paymentOption.breakdown, paymentOption.paymentOption), quote.currency)}\n`;
   
@@ -90,21 +90,60 @@ export function getRecurringPaymentLabel(option: PricingOption): string {
 }
 
 /**
- * Value for the recurring/upfront payment: ACV for Annual, ACV/4 for Quarterly, ACV/12 for Monthly, license TCV for Upfront
+ * Recurring payment = List - License Discounts (per period).
+ * Uses recurringPeriodAmount when set (option-period formula); else derives from acvWithoutUpfrontDiscounts; Upfront = license TCV.
  */
 export function getRecurringPaymentValue(breakdown: PricingBreakdown, option: PricingOption): number {
+  if (option === 'Upfront') return breakdown.licenseTcv;
+  if (breakdown.recurringPeriodAmount != null) return breakdown.recurringPeriodAmount;
   switch (option) {
-    case 'Upfront':
-      return breakdown.licenseTcv;
     case 'Annual':
-      return breakdown.acv;
+      return breakdown.acvWithoutUpfrontDiscounts;
     case 'Quarterly':
-      return breakdown.acv / 4;
+      return breakdown.acvWithoutUpfrontDiscounts / 4;
     case 'Financed Monthly':
     case 'Direct Monthly':
-      return breakdown.acv / 12;
+      return breakdown.acvWithoutUpfrontDiscounts / 12;
     default:
-      return breakdown.acv;
+      return breakdown.acvWithoutUpfrontDiscounts;
+  }
+}
+
+/**
+ * Label for license discount by option (e.g. "Annual License Discount", "Quarterly License Discount")
+ */
+export function getLicenseDiscountLabel(option: PricingOption): string {
+  switch (option) {
+    case 'Upfront':
+      return 'Upfront License Discount';
+    case 'Annual':
+      return 'Annual License Discount';
+    case 'Quarterly':
+      return 'Quarterly License Discount';
+    case 'Financed Monthly':
+    case 'Direct Monthly':
+      return 'Monthly License Discount';
+    default:
+      return 'License Discount';
+  }
+}
+
+/**
+ * Label for list price by option (e.g. "Annual List Price", "Quarterly List Price")
+ */
+export function getListPriceLabel(option: PricingOption): string {
+  switch (option) {
+    case 'Upfront':
+      return 'Upfront List Price';
+    case 'Annual':
+      return 'Annual List Price';
+    case 'Quarterly':
+      return 'Quarterly List Price';
+    case 'Financed Monthly':
+    case 'Direct Monthly':
+      return 'Monthly List Price';
+    default:
+      return 'List Price';
   }
 }
 
@@ -122,5 +161,25 @@ export function getFirstPeriodPaymentLabel(option: PricingOption): string {
       return 'First Monthly Payment';
     default:
       return 'First Payment';
+  }
+}
+
+/**
+ * Label for the Products table rightmost price column by payment option
+ * (e.g. "Annual Price", "Quarterly Price", "Monthly Price", "Upfront Price").
+ */
+export function getPriceColumnLabel(option: PricingOption): string {
+  switch (option) {
+    case 'Upfront':
+      return 'Upfront Price';
+    case 'Annual':
+      return 'Annual Price';
+    case 'Quarterly':
+      return 'Quarterly Price';
+    case 'Financed Monthly':
+    case 'Direct Monthly':
+      return 'Monthly Price';
+    default:
+      return 'Price';
   }
 }

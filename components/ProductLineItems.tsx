@@ -275,16 +275,19 @@ export default function ProductLineItems({
               })}
               <td className="px-4 py-3 text-center bg-sky-50 align-middle">
                 <div className="flex items-center justify-center min-h-[80px]">
-                  {currency === 'USD' && fleetSize != null && (
-                    <span className="text-sm font-medium text-slate-800">
-                      {getOpeningPriceGuidance(
-                        negotiationPosition,
-                        fleetSize,
-                        item.sku,
-                        item.productName
-                      ) ?? '—'}
-                    </span>
-                  )}
+                  {currency === 'USD' && fleetSize != null && (() => {
+                    const value = getOpeningPriceGuidance(
+                      negotiationPosition,
+                      fleetSize,
+                      item.sku,
+                      item.productName
+                    );
+                    return (
+                      <span className="text-sm font-medium text-slate-800">
+                        {value != null ? `${value}/mo` : '—'}
+                      </span>
+                    );
+                  })()}
                   {((currency !== 'USD') || fleetSize == null) && (
                     <span className="text-slate-400">—</span>
                   )}

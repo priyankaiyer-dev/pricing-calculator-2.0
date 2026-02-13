@@ -7,13 +7,89 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import {
   calculatePaymentOptionPricing,
-  calculateAnnualListPrice,
   calculateRebateDiscount,
   calculateSubsidyDiscount,
-  calculateFreeMonthsDiscount,
-  calculateDiscountedPriceForOption,
+  isHardwareOnlyItem,
 } from '@/lib/utils/calculations';
-import { getRecurringPaymentLabel, getRecurringPaymentValue, getFirstPeriodPaymentLabel } from '@/lib/utils/formatting';
+/** Option-period frequency (months): 12 Annual, 3 Quarterly, 1 Monthly, termLength Upfront. */
+function getOptionFrequency(option: PricingOption, termLength: number): number {
+  switch (option) {
+    case 'Annual': return 12;
+    case 'Quarterly': return 3;
+    case 'Financed Monthly':
+    case 'Direct Monthly': return 1;
+    case 'Upfront': return termLength;
+    default: return 12;
+  }
+}
+
+/** Per-option pricing with corrected formulas (matches Customer Quote view). All amounts in option-period terms except where noted. */
+function getOptionPricing(quote: Quote, option: PricingOption) {
+  const termLength = quote.termLength ?? 0;
+  const nonHardware = quote.productLineItems.filter((i) => !isHardwareOnlyItem(i));
+  const frequency = getOptionFrequency(option, termLength);
+  const isUpfront = option === 'Upfront';
+
+  const optionListPrice = nonHardware.reduce(
+    (sum, item) => sum + (item.perLicensePerMonth ?? 0) * item.quantity * frequency,
+    0
+  );
+  const optionLicenseDiscount = nonHardware.reduce(
+    (sum, item) => {
+      const discountPct = item.discounts?.[option] ?? 0;
+      const licenseDiscountPerUnitPerMonth = (item.perLicensePerMonth ?? 0) * (discountPct / 100);
+      return sum + licenseDiscountPerUnitPerMonth * item.quantity * frequency;
+    },
+    0
+  );
+  const sumOfOptionPrices = nonHardware.reduce((sum, item) => {
+    const discount = item.discounts?.[option] ?? 0;
+    const annualPrice = item.annualTotal * (1 - discount / 100);
+    let optionPrice = annualPrice;
+    if (option === 'Quarterly') optionPrice = annualPrice / 4;
+    else if (option === 'Financed Monthly' || option === 'Direct Monthly') optionPrice = annualPrice / 12;
+    else if (option === 'Upfront') optionPrice = annualPrice * (termLength / 12);
+    return sum + optionPrice;
+  }, 0);
+  const discountedHardware = quote.productLineItems.reduce(
+    (sum, item) =>
+      sum + (item.hardware ?? 0) * item.quantity * (1 - (item.discounts?.[option] ?? 0) / 100),
+    0
+  );
+  const postDiscountMonthlyPrice = frequency > 0 ? sumOfOptionPrices / frequency : 0;
+  const freeMonthsCount = quote.rebatesAndSubsidies?.freeMonths?.[option] ?? 0;
+  const freeMonthsValue = postDiscountMonthlyPrice * freeMonthsCount;
+  const pricingForCredit = quote.paymentOptionPricing?.find((p) => p.paymentOption === option);
+  const acvForSubsidy = pricingForCredit?.breakdown?.acvWithoutUpfrontDiscounts ?? 0;
+  const creditAmount =
+    calculateRebateDiscount(quote.rebatesAndSubsidies, option) +
+    calculateSubsidyDiscount(quote.rebatesAndSubsidies, option, acvForSubsidy);
+  const firstPayment =
+    !isUpfront
+      ? Math.max(0, sumOfOptionPrices + discountedHardware - creditAmount - freeMonthsValue)
+      : null;
+  const totalLicenseCost = Math.max(
+    0,
+    postDiscountMonthlyPrice * termLength + discountedHardware - creditAmount - freeMonthsValue
+  );
+  const annualLicenseDiscount = frequency > 0 && !isUpfront ? optionLicenseDiscount * (12 / frequency) : optionLicenseDiscount;
+  const acv = !isUpfront && frequency > 0 ? postDiscountMonthlyPrice * 12 : totalLicenseCost;
+
+  return {
+    optionListPrice,
+    optionLicenseDiscount,
+    sumOfOptionPrices,
+    discountedHardware,
+    postDiscountMonthlyPrice,
+    freeMonthsCount,
+    freeMonthsValue,
+    creditAmount,
+    firstPayment,
+    totalLicenseCost,
+    annualLicenseDiscount,
+    acv,
+  };
+}
 
 export default function QuoteComparisonPage() {
   const params = useParams();
@@ -67,10 +143,41 @@ export default function QuoteComparisonPage() {
     );
   }, [quote, pricingOptions]);
 
+  /** Annual List Price (license only, non-hardware) — same for all options. */
   const annualListPrice = useMemo(() => {
     if (!quote) return 0;
-    return calculateAnnualListPrice(quote.productLineItems);
+    const nonHardware = quote.productLineItems.filter((i) => !isHardwareOnlyItem(i));
+    return nonHardware.reduce(
+      (sum, item) => sum + (item.perLicensePerMonth ?? 0) * item.quantity * 12,
+      0
+    );
   }, [quote]);
+
+  /** Per-option computed pricing (corrected formulas). */
+  const optionPricingMap = useMemo(() => {
+    if (!quote) return new Map<PricingOption, ReturnType<typeof getOptionPricing>>();
+    const m = new Map<PricingOption, ReturnType<typeof getOptionPricing>>();
+    pricingOptions.forEach((opt) => m.set(opt, getOptionPricing(quote, opt)));
+    return m;
+  }, [quote, pricingOptions]);
+
+  /** Blended discount % per option: (annual list + hardware list - discounted total) / (annual list + hardware list). */
+  const blendedDiscountPercent = useMemo(() => {
+    if (!quote) return new Map<PricingOption, number>();
+    const hardwareList = quote.productLineItems.reduce(
+      (s, i) => s + (i.hardware ?? 0) * i.quantity,
+      0
+    );
+    const totalList = annualListPrice + hardwareList;
+    const m = new Map<PricingOption, number>();
+    pricingOptions.forEach((opt) => {
+      const op = optionPricingMap.get(opt);
+      if (!op || totalList === 0) return;
+      const totalDiscounted = op.acv + op.discountedHardware;
+      m.set(opt, ((totalList - totalDiscounted) / totalList) * 100);
+    });
+    return m;
+  }, [quote, annualListPrice, optionPricingMap, pricingOptions]);
 
   if (loading) {
     return (
@@ -178,7 +285,7 @@ export default function QuoteComparisonPage() {
             <thead>
               <tr>
                 <th className="bg-white px-4 py-3 text-left text-sm font-bold text-navy uppercase border-b border-r border-slate-300">
-                  Monthly / Hardware Price by Product
+                  Annual Price by Product
                 </th>
                 {pricingOptions.map((opt) => (
                   <th
@@ -225,93 +332,67 @@ export default function QuoteComparisonPage() {
               </tr>
               {[
                 {
-                  label: 'Annual List Value',
+                  label: 'Annual List Price',
                   getValue: (_option: PricingOption) => formatCurrency(annualListPrice),
-                  sameForAll: true,
                 },
                 {
-                  label: 'Subsidies / Rebates',
+                  label: 'Annual License Discount',
                   getValue: (option: PricingOption) => {
-                    const discounted = calculateDiscountedPriceForOption(
-                      quote.productLineItems,
-                      option
-                    );
-                    const rebate = calculateRebateDiscount(quote.rebatesAndSubsidies, option);
-                    const subsidy = calculateSubsidyDiscount(
-                      quote.rebatesAndSubsidies,
-                      option,
-                      discounted
-                    );
-                    return formatCurrency(rebate + subsidy);
+                    const op = optionPricingMap.get(option);
+                    return op ? formatCurrency(op.annualLicenseDiscount) : '—';
                   },
-                  sameForAll: false,
-                },
-                {
-                  label: 'Free Months',
-                  getValue: (option: PricingOption) => {
-                    const discounted = calculateDiscountedPriceForOption(
-                      quote.productLineItems,
-                      option
-                    );
-                    const val = calculateFreeMonthsDiscount(
-                      quote.rebatesAndSubsidies,
-                      option,
-                      discounted
-                    );
-                    return formatCurrency(val);
-                  },
-                  sameForAll: false,
                 },
                 {
                   label: 'Blended Discount %',
                   getValue: (option: PricingOption) => {
-                    const p = displayPricing.find((x) => x.paymentOption === option);
-                    return p ? `${p.blendedDiscount.toFixed(2)}%` : '—';
+                    const pct = blendedDiscountPercent.get(option);
+                    return pct !== undefined ? `${pct.toFixed(2)}%` : '—';
                   },
-                  sameForAll: false,
                 },
                 {
-                  label: 'Discount Value',
+                  label: 'Credit (subsidies/rebates)',
                   getValue: (option: PricingOption) => {
-                    const p = displayPricing.find((x) => x.paymentOption === option);
-                    return p ? formatCurrency(p.breakdown.discountValue) : '—';
+                    const op = optionPricingMap.get(option);
+                    return op ? formatCurrency(op.creditAmount) : '—';
                   },
-                  sameForAll: false,
+                },
+                {
+                  label: 'Free Months Value',
+                  getValue: (option: PricingOption) => {
+                    const op = optionPricingMap.get(option);
+                    return op ? formatCurrency(op.freeMonthsValue) : '—';
+                  },
                 },
                 {
                   label: 'Annual Contract Value',
                   getValue: (option: PricingOption) => {
-                    const p = displayPricing.find((x) => x.paymentOption === option);
-                    return p ? formatCurrency(p.breakdown.acv) : '—';
+                    const op = optionPricingMap.get(option);
+                    return op ? formatCurrency(op.acv) : '—';
                   },
-                  sameForAll: false,
                 },
                 {
-                  label: 'Total Contract Value',
+                  label: 'Total License Cost',
                   getValue: (option: PricingOption) => {
-                    const p = displayPricing.find((x) => x.paymentOption === option);
-                    return p ? formatCurrency(p.breakdown.licenseTcv) : '—';
+                    const op = optionPricingMap.get(option);
+                    return op ? formatCurrency(op.totalLicenseCost) : '—';
                   },
-                  sameForAll: false,
                 },
                 {
-                  label: 'Recurring / Upfront Payment',
+                  label: 'Recurring Payment',
                   getValue: (option: PricingOption) => {
-                    const p = displayPricing.find((x) => x.paymentOption === option);
-                    if (!p) return '—';
-                    return formatCurrency(getRecurringPaymentValue(p.breakdown, option));
+                    if (option === 'Upfront') return '—';
+                    const op = optionPricingMap.get(option);
+                    return op ? formatCurrency(op.sumOfOptionPrices) : '—';
                   },
-                  sameForAll: false,
                 },
                 {
                   label: 'First Period Payment',
                   getValue: (option: PricingOption) => {
-                    if (option === 'Upfront') return '—';
-                    const p = displayPricing.find((x) => x.paymentOption === option);
-                    const val = p?.breakdown.firstPeriodPayment;
-                    return val !== undefined ? formatCurrency(val) : '—';
+                    const op = optionPricingMap.get(option);
+                    if (!op) return '—';
+                    if (option === 'Upfront') return formatCurrency(op.totalLicenseCost);
+                    return op.firstPayment != null ? formatCurrency(op.firstPayment) : '—';
                   },
-                  sameForAll: false,
                 },
               ].map((row, idx) => {
                 const isEven = idx % 2 === 0;

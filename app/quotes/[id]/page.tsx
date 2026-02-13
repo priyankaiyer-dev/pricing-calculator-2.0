@@ -648,7 +648,7 @@ export default function QuoteEditorPage() {
                         </div>
                       </div>
                       <div className="p-4 bg-white rounded-lg">
-                        <div className="text-sm text-slate-600 mb-1">Discount Value</div>
+                        <div className="text-sm text-slate-600 mb-1">License Discount</div>
                         <div className="text-2xl font-bold text-navy">
                           {formatCurrency(pricing.breakdown.discountValue)}
                         </div>
@@ -681,18 +681,18 @@ export default function QuoteEditorPage() {
 
                     <div className="mt-4 flex gap-4">
                       {option !== 'Upfront' && pricing.breakdown.firstPeriodPayment !== undefined && (
-                        <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
-                          <div className="text-sm mb-1">
+                        <div className="flex-1 p-4 bg-white rounded-lg">
+                          <div className="text-sm mb-1 text-slate-600">
                             {getFirstPeriodPaymentLabel(option)}
                           </div>
-                          <div className="text-2xl font-bold">
+                          <div className="text-2xl font-bold text-navy">
                             {formatCurrency(pricing.breakdown.firstPeriodPayment)}
                           </div>
                         </div>
                       )}
-                      <div className="flex-1 p-4 bg-pulse-600 text-white rounded-lg">
-                        <div className="text-sm mb-1">{getRecurringPaymentLabel(option)}</div>
-                        <div className="text-2xl font-bold">
+                      <div className="flex-1 p-4 bg-white rounded-lg">
+                        <div className="text-sm mb-1 text-slate-600">{getRecurringPaymentLabel(option)}</div>
+                        <div className="text-2xl font-bold text-navy">
                           {formatCurrency(getRecurringPaymentValue(pricing.breakdown, option))}
                         </div>
                       </div>

@@ -16,18 +16,24 @@ export interface ProductLineItem {
 }
 
 export interface PricingBreakdown {
-  blendedDiscount: number; // percentage
-  discountValue: number; // dollar amount
+  blendedDiscount: number; // percentage (includes license discounts + subsidies/rebates/free months)
+  discountValue: number; // license discount in dollars for this option period (product line items only)
   acv: number; // Annual Contract Value
   licenseTcv: number; // Total Contract Value over term
   /** ACV before rebates/subsidies/free months (same as acv when no upfront discounts) */
   acvWithoutUpfrontDiscounts: number;
   /** License TCV before rebates/subsidies/free months (same as licenseTcv when no upfront discounts) */
   licenseTcvWithoutUpfrontDiscounts: number;
-  /** Discounted hardware total for this option (for first period payment calc); only for non-Upfront */
+  /** Discounted hardware total for this option (product-level discounts applied) */
   discountedHardware?: number;
-  /** First period payment = recurring + hardware - subsidies; only for non-Upfront options */
+  /** First period payment = recurring + hardware - credit - free months value; only for non-Upfront options */
   firstPeriodPayment?: number;
+  /** List price for this option period (license only, non-hardware products). e.g. Quarterly List Price */
+  optionListPrice?: number;
+  /** License discount for this option period (license only, non-hardware products). e.g. Quarterly License Discount */
+  optionLicenseDiscount?: number;
+  /** Recurring payment for one period = optionListPrice - optionLicenseDiscount. e.g. Recurring Quarterly Payment */
+  recurringPeriodAmount?: number;
 }
 
 export interface PaymentOptionPricing {

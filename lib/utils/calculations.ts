@@ -1,5 +1,31 @@
 import { ProductLineItem, PricingOption, PaymentOptionPricing, PricingBreakdown, RebatesAndSubsidies } from '@/lib/types/quote';
 
+/** True if item is hardware-only (no recurring license to show in option list/discount) */
+export function isHardwareOnlyItem(item: ProductLineItem): boolean {
+  const hasLicense = (item.perLicensePerMonth ?? 0) > 0;
+  const hasHardware = (item.hardware ?? 0) > 0;
+  if (item.isHardwareOnly === true) return true;
+  if (hasHardware && !hasLicense) return true;
+  if (hasHardware && hasLicense) {
+    const hw = item.hardware ?? 0;
+    const lic = item.perLicensePerMonth ?? 0;
+    if (hw > 0 && Math.abs(lic * 12 - hw) < 1) return true;
+  }
+  return false;
+}
+
+/** Months per period for list/discount formulas: 12 Annual, 3 Quarterly, 1 Monthly, termLength Upfront */
+export function getOptionFrequency(option: PricingOption, termLength: number): number {
+  switch (option) {
+    case 'Annual': return 12;
+    case 'Quarterly': return 3;
+    case 'Financed Monthly':
+    case 'Direct Monthly': return 1;
+    case 'Upfront': return termLength;
+    default: return 12;
+  }
+}
+
 /**
  * Calculate annual total for a product line item
  */
@@ -103,7 +129,8 @@ export function calculateTotalUpfrontDiscounts(
 }
 
 /**
- * Calculate pricing breakdown for a payment option using product-level discounts and rebates/subsidies
+ * Calculate pricing breakdown for a payment option using product-level discounts and rebates/subsidies.
+ * List/discount/recurring use license-only, non-hardware products with option-period frequency.
  */
 export function calculatePricingBreakdown(
   lineItems: ProductLineItem[],
@@ -111,55 +138,87 @@ export function calculatePricingBreakdown(
   termLength: number,
   rebatesAndSubsidies?: RebatesAndSubsidies
 ): PricingBreakdown {
-  const annualListPrice = calculateAnnualListPrice(lineItems);
-  const discountedPrice = calculateDiscountedPriceForOption(lineItems, paymentOption);
-  
-  // Apply upfront discounts (rebate, subsidy, free months)
-  const upfrontDiscounts = calculateTotalUpfrontDiscounts(
-    rebatesAndSubsidies,
-    paymentOption,
-    discountedPrice
-  );
-  
-  // Final price after all discounts
-  const finalPrice = Math.max(0, discountedPrice - upfrontDiscounts);
-  
-  // Total discount value includes both product discounts and upfront discounts
-  const totalDiscountValue = annualListPrice - finalPrice;
-  const blendedDiscount = calculateBlendedDiscount(annualListPrice, finalPrice);
-  const acv = finalPrice;
-  const licenseTcv = acv * (termLength / 12);
-  const licenseTcvWithoutUpfrontDiscounts = discountedPrice * (termLength / 12);
+  const nonHardware = lineItems.filter((i) => !isHardwareOnlyItem(i));
+  const frequency = getOptionFrequency(paymentOption, termLength);
+  const isUpfront = paymentOption === 'Upfront';
 
-  // Discounted hardware total for this option (product-level discounts applied)
-  const discountedHardware = lineItems.reduce(
-    (sum, item) =>
-      sum +
-      item.hardware * item.quantity * (1 - (item.discounts?.[paymentOption] ?? 0) / 100),
+  // Option-period list price (license only): SUM(Monthly Unit List Price * Quantity * frequency)
+  // e.g. Quarterly List Price = list prices * 3 * quantity
+  const optionListPrice = nonHardware.reduce(
+    (sum, item) => sum + (item.perLicensePerMonth ?? 0) * item.quantity * frequency,
     0
   );
 
-  // First period payment = recurring amount + hardware costs - applicable subsidies (capped at 0)
-  const periodsPerYear =
-    paymentOption === 'Annual' ? 1
-    : paymentOption === 'Quarterly' ? 4
-    : paymentOption === 'Financed Monthly' || paymentOption === 'Direct Monthly' ? 12
-    : 0;
-  const recurringPeriodAmount = periodsPerYear > 0 ? acv / periodsPerYear : 0;
+  // Option-period license discount: SUM(License Discount Value per unit per month * Quantity * frequency)
+  const optionLicenseDiscount = nonHardware.reduce(
+    (sum, item) => {
+      const discountPct = item.discounts?.[paymentOption] ?? 0;
+      const licenseDiscountPerUnitPerMonth = (item.perLicensePerMonth ?? 0) * (discountPct / 100);
+      return sum + licenseDiscountPerUnitPerMonth * item.quantity * frequency;
+    },
+    0
+  );
+
+  // Sum of discounted annual totals (license+hardware) for non-hardware = same basis as Products table option column
+  const discountedAnnualTotalNonHardware = nonHardware.reduce(
+    (sum, item) => sum + (item.annualTotal ?? 0) * (1 - (item.discounts?.[paymentOption] ?? 0) / 100),
+    0
+  );
+
+  // Recurring = sum of the "[Option] Price" column from Products table (e.g. 178.50 + 114.75 = Quarterly Price column sum)
+  // Per line: option price = (annualTotal * (1-d)) / periodsPerYear → Annual /1, Quarterly /4, Monthly /12
+  const recurringPeriodAmount =
+    !isUpfront && frequency > 0 ? (discountedAnnualTotalNonHardware * frequency) / 12 : 0;
+
+  // Annual equivalent and TCV
+  const acvWithoutUpfrontDiscounts = isUpfront
+    ? discountedAnnualTotalNonHardware * (termLength / 12)
+    : (recurringPeriodAmount * 12) / frequency;
+  const licenseTcvWithoutUpfrontDiscounts = isUpfront
+    ? discountedAnnualTotalNonHardware * (termLength / 12)
+    : acvWithoutUpfrontDiscounts * (termLength / 12);
+
+  const discountedHardware = lineItems.reduce(
+    (sum, item) =>
+      sum + (item.hardware ?? 0) * item.quantity * (1 - (item.discounts?.[paymentOption] ?? 0) / 100),
+    0
+  );
+
+  // Upfront discounts (used for TCV and first payment)
+  const upfrontDiscounts = calculateTotalUpfrontDiscounts(
+    rebatesAndSubsidies,
+    paymentOption,
+    acvWithoutUpfrontDiscounts
+  );
+  const licenseTcv = Math.max(0, licenseTcvWithoutUpfrontDiscounts - upfrontDiscounts);
+  const acv = Math.max(0, acvWithoutUpfrontDiscounts);
+
+  const annualListPrice = calculateAnnualListPrice(lineItems);
+  const totalDiscountedAnnual = acvWithoutUpfrontDiscounts + discountedHardware;
+  const blendedDiscount = calculateBlendedDiscount(annualListPrice, totalDiscountedAnnual);
+
+  const rebate = calculateRebateDiscount(rebatesAndSubsidies, paymentOption);
+  const subsidy = calculateSubsidyDiscount(rebatesAndSubsidies, paymentOption, acvWithoutUpfrontDiscounts);
+  const freeMonthsCount = rebatesAndSubsidies?.freeMonths?.[paymentOption] ?? 0;
+  const freeMonthsValue = frequency > 0 ? (recurringPeriodAmount / frequency) * freeMonthsCount : 0;
+
   const firstPeriodPayment =
-    periodsPerYear > 0
-      ? Math.max(0, recurringPeriodAmount + discountedHardware - upfrontDiscounts)
+    !isUpfront
+      ? Math.max(0, recurringPeriodAmount + discountedHardware - rebate - subsidy - freeMonthsValue)
       : undefined;
 
   return {
     blendedDiscount,
-    discountValue: totalDiscountValue,
+    discountValue: optionLicenseDiscount,
     acv,
     licenseTcv,
-    acvWithoutUpfrontDiscounts: discountedPrice,
+    acvWithoutUpfrontDiscounts,
     licenseTcvWithoutUpfrontDiscounts,
-    discountedHardware: periodsPerYear > 0 ? discountedHardware : undefined,
+    discountedHardware,
     firstPeriodPayment,
+    optionListPrice,
+    optionLicenseDiscount,
+    recurringPeriodAmount,
   };
 }
 
@@ -181,7 +240,7 @@ export function calculatePaymentOptionPricing(
       termLength,
       rebatesAndSubsidies
     );
-    const annualLicenseDiscount = breakdown.discountValue;
+    const annualLicenseDiscount = breakdown.discountValue; // License discount value (product line items only)
     const recurringAnnualPayment = breakdown.acv;
 
     return {
